@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>SMC Gatekeeper</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --glass: rgba(30, 41, 59, 0.7);
+        }
+        body { 
+            background: var(--bg); 
+            color: #f8fafc; 
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass { 
+            background: var(--glass); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.08); 
+        }
+        .emerald-glow { box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
+        input[type="number"], input[type="text"], select {
+            border: 1px solid rgba(255,255,255,0.1);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        input:focus { border-color: #3b82f6; background: #1e293b; }
+        .switch-input:checked + .switch-label { background: #10b981; }
+        .loading { pointer-events: none; opacity: 0.6; }
+    </style>
+</head>
+<body class="p-4 max-w-lg mx-auto pb-10">
+
+    <!-- Probability Header -->
+    <div id="meter" class="glass rounded-[2rem] p-8 mb-6 text-center transition-all duration-500">
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold opacity-40">Entry Probability</h2>
+        <div id="grade-text" class="text-6xl font-extrabold mt-2 transition-all">0%</div>
+        <div id="warning" class="text-rose-400 text-[11px] mt-3 font-bold tracking-widest hidden flex items-center justify-center gap-1">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"></path></svg>
+            STIFLED ORDERFLOW (PREMIUM/DISCOUNT VIOLATION)
+        </div>
+    </div>
+
+    <!-- Multi-Step Inputs -->
+    <div class="glass rounded-[2rem] p-6 space-y-6">
+        
+        <!-- Range Setup -->
+        <div class="space-y-3">
+            <h3 class="text-xs font-bold opacity-50 uppercase">Dealing Range</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] opacity-60 ml-1">RANGE HIGH</label>
+                    <input type="number" id="rh" step="any" placeholder="0.0000" class="w-full bg-slate-900/50 rounded-xl p-3 text-sm">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] opacity-60 ml-1">RANGE LOW</label>
+                    <input type="number" id="rl" step="any" placeholder="0.0000" class="w-full bg-slate-900/50 rounded-xl p-3 text-sm">
+                </div>
+            </div>
+        </div>
+
+        <!-- Entry Details -->
+        <div class="space-y-3">
+            <h3 class="text-xs font-bold opacity-50 uppercase">Execution Data</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] opacity-60 ml-1">ENTRY PRICE</label>
+                    <input type="number" id="entry" step="any" placeholder="0.0000" class="w-full bg-slate-900/50 rounded-xl p-3 text-sm">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] opacity-60 ml-1">STOP LOSS</label>
+                    <input type="number" id="sl" step="any" placeholder="0.0000" class="w-full bg-slate-900/50 rounded-xl p-3 text-sm">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] opacity-60 ml-1">TAKE PROFIT</label>
+                    <input type="number" id="tp" step="any" placeholder="0.0000" class="w-full bg-slate-900/50 rounded-xl p-3 text-sm">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] opacity-60 ml-1">PAIR (ASSET)</label>
+                    <input type="text" id="pair" placeholder="EURUSD" class="w-full bg-slate-900/50 rounded-xl p-3 text-sm text-center font-bold tracking-widest uppercase">
+                </div>
+            </div>
+            <select id="bias" class="w-full bg-slate-800 rounded-xl p-4 font-bold text-sm border-none ring-1 ring-white/10 mt-2">
+                <option value="LONG">INSTITUTIONAL LONG (DISCOUNT)</option>
+                <option value="SHORT">INSTITUTIONAL SHORT (PREMIUM)</option>
+            </select>
+        </div>
+
+        <!-- Probability Checkboxes -->
+        <div class="space-y-3">
+            <h3 class="text-xs font-bold opacity-50 uppercase">Confluence Validation</h3>
+            <div class="grid gap-2">
+                <label class="flex items-center justify-between glass p-4 rounded-2xl cursor-pointer">
+                    <span class="text-xs font-bold">HTF BIAS ALIGNMENT</span>
+                    <input type="checkbox" class="conf w-5 h-5 accent-emerald-500" data-pts="20">
+                </label>
+                <label class="flex items-center justify-between glass p-4 rounded-2xl cursor-pointer">
+                    <span class="text-xs font-bold">PD ARRAY (OB/FVG/BREAKER)</span>
+                    <input type="checkbox" class="conf w-5 h-5 accent-emerald-500" data-pts="30">
+                </label>
+                <label class="flex items-center justify-between glass p-4 rounded-2xl cursor-pointer">
+                    <span class="text-xs font-bold">LIQUIDITY SWEEP (XUL/XDL)</span>
+                    <input type="checkbox" class="conf w-5 h-5 accent-emerald-500" data-pts="30">
+                </label>
+                <label class="flex items-center justify-between glass p-4 rounded-2xl cursor-pointer">
+                    <span class="text-xs font-bold">MSS / MARKET STRUCTURE SHIFT</span>
+                    <input type="checkbox" class="conf w-5 h-5 accent-emerald-500" data-pts="20">
+                </label>
+            </div>
+        </div>
+
+        <!-- Lot Sizing -->
+        <div class="p-4 bg-slate-900/40 rounded-2xl border border-white/5">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xs font-bold opacity-50 uppercase">Risk Management</h3>
+                <span id="calc-lots" class="text-emerald-400 font-bold text-lg">0.00 Lots</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <input type="number" id="balance" placeholder="Balance" value="10000" class="w-full bg-slate-900/80 rounded-xl p-3 text-xs">
+                <input type="number" id="risk" placeholder="Risk %" value="1" class="w-full bg-slate-900/80 rounded-xl p-3 text-xs">
+            </div>
+        </div>
+
+        <button id="commitBtn" onclick="logTrade()" class="w-full bg-emerald-600 hover:bg-emerald-500 p-5 rounded-2xl font-black text-sm tracking-widest shadow-lg emerald-glow active:scale-[0.98] transition-all uppercase">Commit Institutional Entry</button>
+    </div>
+
+    <script>
+        const getVal = (id) => parseFloat(document.getElementById(id).value) || 0;
+
+        const updateEngine = () => {
+            let score = 0;
+            document.querySelectorAll('.conf:checked').forEach(el => score += parseInt(el.dataset.pts));
+            
+            const rh = getVal('rh');
+            const rl = getVal('rl');
+            const entry = getVal('entry');
+            const bias = document.getElementById('bias').value;
+            
+            // Premium/Discount Logic
+            const equilibrium = rl + (rh - rl) / 2;
+            let violation = false;
+            
+            if (rh > 0 && rl > 0 && entry > 0) {
+                if (bias === 'LONG' && entry > equilibrium) violation = true;
+                if (bias === 'SHORT' && entry < equilibrium) violation = true;
+            }
+
+            if (violation) {
+                score *= 0.5;
+                document.getElementById('warning').classList.remove('hidden');
+                document.getElementById('meter').style.borderColor = 'rgba(244, 63, 94, 0.4)';
+            } else {
+                document.getElementById('warning').classList.add('hidden');
+                document.getElementById('meter').style.borderColor = 'rgba(255,255,255,0.08)';
+            }
+
+            // UI Feedback
+            const gradeEl = document.getElementById('grade-text');
+            gradeEl.innerText = Math.round(score) + '%';
+            if(score >= 70) gradeEl.className = 'text-6xl font-extrabold mt-2 text-emerald-400';
+            else if(score >= 40) gradeEl.className = 'text-6xl font-extrabold mt-2 text-amber-400';
+            else gradeEl.className = 'text-6xl font-extrabold mt-2 text-rose-500';
+
+            // Lot Size Calculation
+            calculateLots();
+
+            return Math.round(score);
+        };
+
+        const calculateLots = () => {
+            const balance = getVal('balance');
+            const riskPercent = getVal('risk');
+            const entry = getVal('entry');
+            const sl = getVal('sl');
+            
+            if (entry > 0 && sl > 0 && entry !== sl) {
+                const riskAmount = balance * (riskPercent / 100);
+                const pips = Math.abs(entry - sl) * 10000; // standard 4-digit pip approx
+                const lotSize = (riskAmount / (pips * 10)).toFixed(2); // 10 units per pip per std lot
+                document.getElementById('calc-lots').innerText = isFinite(lotSize) ? lotSize + ' Lots' : '0.00 Lots';
+                return lotSize;
+            }
+            return 0;
+        };
+
+        const logTrade = async () => {
+            const btn = document.getElementById('commitBtn');
+            const score = updateEngine();
+            const payload = {
+                pair: document.getElementById('pair').value || "UNKNOWN",
+                bias: document.getElementById('bias').value,
+                entry: getVal('entry'),
+                sl: getVal('sl'),
+                tp: getVal('tp'),
+                lotSize: calculateLots(),
+                grade: score
+            };
+
+            if (!payload.entry || !payload.sl) {
+                alert("CRITICAL ERROR: Entry and Stop Loss required.");
+                return;
+            }
+
+            btn.classList.add('loading');
+            btn.innerText = "UPLOADING TO VAULT...";
+
+            try {
+                const res = await fetch('api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                
+                if (result.status === 'success') {
+                    alert("🏛️ VAULT SECURED: Trade has been logged and sent to Telegram.");
+                } else {
+                    alert("CONNECTION FAILED: " + result.message);
+                }
+            } catch (e) {
+                alert("SYSTEM ERROR: Could not reach the API.");
+            } finally {
+                btn.classList.remove('loading');
+                btn.innerText = "COMMIT INSTITUTIONAL ENTRY";
+            }
+        };
+
+        // Listeners for real-time engine updates
+        document.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('input', updateEngine);
+        });
+
+        // Initialize PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
